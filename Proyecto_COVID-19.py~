@@ -1,0 +1,144 @@
+import numpy as np
+import matplotlib.pyplot as mplt
+
+###
+def initial_pos(N_parti,L):
+    return np.random.random((N_parti,2))*L
+def V0(N_p):
+    return np.random.uniform(low=-0.5,high=0.5,size=(N_p,2))
+def V0_0(N_p,N_v):
+    vel= np.random.uniform(low=-0.5,high=0.5,size=(N_v,2))
+    vel0=np.zeros((N_p-N_v,2))
+    return np.concatenate((vel,vel0),axis=0)
+     
+N_p=150
+L=20
+ratio=0.5
+x=initial_pos(N_p,L)
+mplt.plot(x[:,0],x[:,1],'.')
+mplt.show()
+
+def distance(r1,r2,rt):
+    d=np.sqrt(sum((r1-r2)**2))
+    #print(d)
+    return d<=rt*2
+def dislim(r1,v1,rt,L):
+    #l1=np.absolute(r1-rt<=rt*2w_i
+    l1=(r1-rt)<=0
+    #l2=np.absolute(r1-L)<=rt*2
+    l2=(r1+rt)>=L
+    if l1.all():
+        r1=np.ones(2)*rt
+        v1 =-v1
+    elif l1.any():
+        if l1[0]:
+            r1[0]=rt
+            v1[0]=-v1[0]
+        #    v1=-v1
+        elif l1[1]:
+            r1[1]=rt
+            v1[1]=-v1[1]
+    if l2.all():
+        r1=np.ones(2)*(L-rt)
+        v1 =-v1
+    elif l2.any():
+        if l2[0]:
+            l2[0]=L-rt
+            v1[0]=-v1[0]
+        elif l2[1]:
+            l2[1]=L-rt
+            v1[1]=-v1[1]
+    return v1
+    
+def vel_evol(v1,v2):
+    vf2=-v1
+    vf1=-v2
+    return vf1,vf2
+def x_evol(x0,v):
+    x = v+x0
+    return x
+def i_infected(N_p,N_i):
+    time = np.zeros(N_p)
+    infected = np.random.random_integers(low = 0,high = N_p-1,size = N_i)
+    for j in infected:
+        time[j] = 1
+    return time, infected
+def is_infected(i,j,infected,recovery):
+    if (i==infected).any() and (j==infected).any():
+        pass
+    elif (i==infected).any() or (j==infected).any():
+        if (i==infected).any():
+            if (np.array(recovery)==j).any():
+                infected=infected
+            else:
+                infected=np.append(infected,j)
+        else:
+            if (np.array(recovery)==i).any():
+                infected=infected          
+            else:
+                infected=np.append(infected,i)
+    return infected
+def infected_time(infected,time,d_infected,recovery):
+    #recovery=[]
+    for i in infected:
+        #print(i)
+        time[i]+=1
+        if time[i]==d_infected:
+            #print('se recuperó')
+            infected=infected[infected!=i]
+            recovery.append(i)
+            time[i]=0
+    #print('nuevos infectados',new_infected)
+    return infected,recovery,time
+            
+r=initial_pos(N_p,L)
+v=V0(N_p)
+#v=V0_0(N_p,20)
+d_inf=14
+#v=np.array([1,0])
+recovery=[]
+beta=0.5
+iterations=200
+t,infected=i_infected(N_p,1)
+count_infected=[]
+count_recovery=[]
+parti=[]
+parti2=[]
+for m in range(iterations):
+    for i in range(N_p):
+        v[i]=dislim(r[i],v[i],ratio,L)
+        for j in range(N_p):
+            if i <= j:  
+                break
+            l=distance(r[i],r[j],ratio)
+            if l:
+                if np.random.random(1)<=beta:
+                    infected=is_infected(i,j,infected,recovery)
+                v[i],v[j]=vel_evol(v[i],v[j])
+            else:
+                pass
+    infected,recovery,t=infected_time(infected,t,d_inf,recovery)
+    if len(infected)==0:
+        print('there is not spread')
+        break
+    count_infected.append(len(infected))
+    count_recovery.append(len(np.array(recovery)))
+    r=x_evol(r,v)
+    #parti.append(r[0])
+    #parti2.append(r[1])     
+#l=np.array(parti)
+#l2=np.array(parti2)
+#mplt.plot(l[:,0],l[:,1])
+#mplt.plot(l[0,0],l[0,1],'o')
+#mplt.plot(l2[:,0],l2[:,1])
+#mplt.plot(l2[0,0],l2[0,1],'o')
+#mplt.show()
+mplt.plot(np.arange(len(count_infected)),count_infected,label='Infected')
+mplt.plot(np.arange(len(count_recovery)),np.array(count_recovery),label='Recovery')
+mplt.grid()
+mplt.legend()
+mplt.xlabel('Días')
+mplt.ylabel('Contagiados')
+mplt.show()
+    
+    
